@@ -9,6 +9,7 @@ const cdThumb = $('.cd-thumb');
 const audio = $('#audio');
 const playBtn= $('.btn-toggle-play')
 const player = $('.player')
+const progress = $('#progress')
 
 
 const app = {
@@ -91,22 +92,38 @@ const app = {
             cd.style.width = cdNewWidth > 0 ? cdNewWidth + 'px' :0
             cd.style.opacity = cdNewWidth / cdWidth
         }
-
+        
+        // pause với start audio
         playBtn.onclick = function() {      
 
             playBtn.onclick = function() {
                 if (_this.isPlaying) {
-                    _this.isPlaying = false; 
                     audio.pause();
-                    player.classList.remove('playing');
                 } else {
-                    _this.isPlaying = true;
                     audio.play();
-                    player.classList.add('playing');
                 }
+            }
+            audio.onplay = function() {
+                _this.isPlaying = true
+                player.classList.add('playing')
+            }
+            audio.onpause = function() {
+                _this.isPlaying = false
+                player.classList.remove('playing')
             }
             
         }
+        // Tua với thanh chạy audio
+        audio.ontimeupdate = function() {
+            if (audio.duration) {
+                const progressOnTime = Math.floor(audio.currentTime / audio.duration * 100)
+                progress.value = progressOnTime   
+            }
+        }
+        progress.addEventListener('input', function(e) {
+            const seekTime = (audio.duration / 100) * e.target.value;
+            audio.currentTime = seekTime;  //
+        });
     },
     LoadCurrentSong: function() {
         heading.textContent = this.currentSong.name;
