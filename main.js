@@ -12,11 +12,16 @@ const player = $('.player')
 const progress = $('#progress')
 const nextBtn = $('.btn-next');
 const prevBtn = $('.btn-prev');
+const randomBtn = $('.btn-random')
+const repeatBtn = $('.btn-repeat')
+const playList =  $('.playlist')
 
 
 const app = {
     isPlaying :false,
     currentIndex : 0,
+    isRandom: false,
+    isRepeat:false,
     song:[
         {
             name: 'MAESTRO',
@@ -56,9 +61,9 @@ const app = {
         },
     ],
     render: function() {
-        const htmls = this.song.map( song => {
+        const htmls = this.song.map((song, index) => {
             return `
-            <div class="song">
+            <div class="song ${index === this.currentIndex ? 'active' : ''}" data-index="${index}">
                 <div class="thumb" 
                     style="background-image: url('${song.image}')">
                 </div>
@@ -69,12 +74,10 @@ const app = {
                 <div class="option">
                     <i class="fas fa-ellipsis-h"></i>
                 </div>
-           </div>
-        `
-        })
-    $('.playlist').innerHTML= htmls.join('')
-        
-        
+            </div>
+            `;
+        });
+        $('.playlist').innerHTML = htmls.join('');
     },
     defineProperties: function () {
         Object.defineProperty(this, "currentSong", {
@@ -84,6 +87,7 @@ const app = {
         });
     },
     
+    
 
     HandleEvents: function() {
 
@@ -91,11 +95,14 @@ const app = {
         const _this = this
         const cdWidth = cd.offsetWidth
         document.onscroll = function() {
-            const scrollTop = window.scrollY || document.documentElement.scrollTop
-            const cdNewWidth= cdWidth - scrollTop
-            cd.style.width = cdNewWidth > 0 ? cdNewWidth + 'px' :0
-            cd.style.opacity = cdNewWidth / cdWidth
-        }
+            const scrollTop = window.scrollY || document.documentElement.scrollTop;
+            const cdNewWidth = cdWidth - scrollTop;
+            cd.style.width = cdNewWidth > 0 ? cdNewWidth + 'px' : '0px';
+            cd.style.opacity = cdNewWidth / cdWidth;
+            updateDashboardBackground()
+        };
+        
+        
 
         // CD Xoay
         const cdThumbAnimated = cdThumb.animate( [
@@ -135,24 +142,74 @@ const app = {
                 progress.value = progressOnTime   
             }
         }
+
+        // Repeat(loop) và tự động chuyển bài khi kết thúc
+
+        audio.onended = function() {
+            if (_this.isRepeat) {
+                audio.play(); 
+            } else {
+                nextBtn.click();  
+            }
+        };
         progress.addEventListener('input', function(e) {
             const seekTime = (audio.duration / 100) * e.target.value;
             audio.currentTime = seekTime;  //
         });
 
+
+        // Bài kế tiếp hoặc bài hát trước + scrollToActiveSong  + render lại lần nữa và CD XOAY
+
         nextBtn.onclick = function() {
-            _this.nextSound();
-            audio.play()
+            if (_this.isRandom) {
+                _this.randomSong();
+            } else {
+                _this.nextSound();
+            }
+            audio.play();
+            cdThumbAnimated.play();
+            _this.render()
+            _this.scrollToActiveSong()
+        };
+        
+        prevBtn.onclick = function() {
+            if (_this.isRandom) {
+                _this.randomSong();
+            } else {
+                _this.prevSong();
+            }
+            audio.play();
+            _this.render()
+            cdThumbAnimated.play();
+            _this.scrollToActiveSong()
+        };
+        
+        // Toggle random mode
+        randomBtn.onclick = function() {
+            _this.isRandom = !_this.isRandom;
+            randomBtn.classList.toggle('active', _this.isRandom);
+        };
+        repeatBtn.onclick = function() {
+            _this.isRepeat = !_this.isRepeat;
+            repeatBtn.classList.toggle('active',_this.isRepeat)
+           
         }
-        prevBtn.onclick = function() {  
-            _this.prevSong();
-            audio.play()
+        playList.onclick = function(e) {
+            const songNode = e.target.closest('.song:not(.active)');
+            if (songNode || e.target.closest('.option')) {
+                _this.currentIndex = Number(songNode.dataset.index);
+                _this.LoadCurrentSong();
+                audio.play();
+                _this.render(); 
+            }
         }
+    
     },  
     LoadCurrentSong: function() {
         heading.textContent = this.currentSong.name;
         cdThumb.style.backgroundImage = `url('${this.currentSong.image}')`;
         audio.src = this.currentSong.path;
+        updateDashboardBackground();
     },
     nextSound: function() {
         this.currentIndex++
@@ -167,8 +224,31 @@ const app = {
             this.currentIndex = this.song.length-1;
         }
         this.LoadCurrentSong();
-    }
-,
+    },
+
+    randomSong: function() {
+        let newIndex
+        do {
+            newIndex = Math.floor(Math.random() * this.song.length)
+        }
+        while(newIndex === this.currentIndex)
+        this.currentIndex = newIndex
+        this.LoadCurrentSong();
+    },
+    repeatSong: function() {
+        if (audio.currentTime === audio.duration) {
+            this.LoadCurrentSong()
+        }
+    },
+    scrollToActiveSong: function() {
+        setTimeout (() => {
+            $('.song.active').scrollIntoView( {
+            behavior: 'smooth',
+            block: 'nearest'
+            })
+        }, 300)
+    },
+    
     start: function() {
         this.defineProperties();
         this.LoadCurrentSong();
@@ -176,5 +256,27 @@ const app = {
         this.HandleEvents();
     }
 
+    
+
 }
 app.start();
+
+
+window.onload = function() {
+    updateDashboardBackground();
+};
+
+function updateDashboardBackground() {
+    const cdNewWidth = cd.offsetWidth;
+    const dashboard = document.querySelector('.dashboard');
+
+    if (cdNewWidth <= 4 && parseFloat(cd.style.opacity) <= 0.04) {
+        const currentSongImage = app.currentSong.image;
+        dashboard.classList.add('dashboard-background');
+        dashboard.style.backgroundImage = `url('${currentSongImage}')`;
+    } else {
+        dashboard.classList.remove('dashboard-background');
+        dashboard.style.backgroundImage = 'none';
+        dashboard.style.backgroundColor = '#fff';
+    }
+}
