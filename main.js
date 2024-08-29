@@ -270,7 +270,7 @@ function updateDashboardBackground() {
     const cdNewWidth = cd.offsetWidth;
     const dashboard = document.querySelector('.dashboard');
 
-    if (cdNewWidth <= 4 && parseFloat(cd.style.opacity) <= 0.04) {
+    if (cdNewWidth <= 12 && parseFloat(cd.style.opacity) <= 0.12) {
         const currentSongImage = app.currentSong.image;
         dashboard.classList.add('dashboard-background');
         dashboard.style.backgroundImage = `url('${currentSongImage}')`;
