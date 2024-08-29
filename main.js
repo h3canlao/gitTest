@@ -10,6 +10,8 @@ const audio = $('#audio');
 const playBtn= $('.btn-toggle-play')
 const player = $('.player')
 const progress = $('#progress')
+const nextBtn = $('.btn-next');
+const prevBtn = $('.btn-prev');
 
 
 const app = {
@@ -77,13 +79,15 @@ const app = {
     defineProperties: function () {
         Object.defineProperty(this, "currentSong", {
             get: function () {
-                return this.song[this.currentIndex];  // Đổi 'songs' thành 'song'
+                return this.song[this.currentIndex]; 
             }
         });
     },
     
 
     HandleEvents: function() {
+
+        // to nhỏ và làm mở cd dần khi scroll
         const _this = this
         const cdWidth = cd.offsetWidth
         document.onscroll = function() {
@@ -92,27 +96,38 @@ const app = {
             cd.style.width = cdNewWidth > 0 ? cdNewWidth + 'px' :0
             cd.style.opacity = cdNewWidth / cdWidth
         }
+
+        // CD Xoay
+        const cdThumbAnimated = cdThumb.animate( [
+            {
+                transform : 'rotate(360deg)'
+            }
+        ], {
+                duration: 10000,
+                iterations: Infinity
+           }
+        )
+        cdThumbAnimated.pause() 
         
         // pause với start audio
-        playBtn.onclick = function() {      
-
-            playBtn.onclick = function() {
-                if (_this.isPlaying) {
-                    audio.pause();
-                } else {
-                    audio.play();
-                }
+        playBtn.onclick = function() {
+            if (_this.isPlaying) {
+                audio.pause();
+            } else {
+                audio.play();
             }
-            audio.onplay = function() {
-                _this.isPlaying = true
-                player.classList.add('playing')
-            }
-            audio.onpause = function() {
-                _this.isPlaying = false
-                player.classList.remove('playing')
-            }
-            
         }
+        audio.onplay = function() {
+            _this.isPlaying = true
+            player.classList.add('playing')
+            cdThumbAnimated.play()
+        }
+        audio.onpause = function() {
+            _this.isPlaying = false
+            player.classList.remove('playing')
+            cdThumbAnimated.pause()
+        }
+
         // Tua với thanh chạy audio
         audio.ontimeupdate = function() {
             if (audio.duration) {
@@ -124,12 +139,36 @@ const app = {
             const seekTime = (audio.duration / 100) * e.target.value;
             audio.currentTime = seekTime;  //
         });
-    },
+
+        nextBtn.onclick = function() {
+            _this.nextSound();
+            audio.play()
+        }
+        prevBtn.onclick = function() {  
+            _this.prevSong();
+            audio.play()
+        }
+    },  
     LoadCurrentSong: function() {
         heading.textContent = this.currentSong.name;
         cdThumb.style.backgroundImage = `url('${this.currentSong.image}')`;
         audio.src = this.currentSong.path;
     },
+    nextSound: function() {
+        this.currentIndex++
+        if (this.currentIndex >= this.song.length) {
+            this.currentIndex =0
+        }
+        this.LoadCurrentSong()
+    },
+    prevSong: function() {
+        this.currentIndex--;
+        if (this.currentIndex < 0) {
+            this.currentIndex = this.song.length-1;
+        }
+        this.LoadCurrentSong();
+    }
+,
     start: function() {
         this.defineProperties();
         this.LoadCurrentSong();
